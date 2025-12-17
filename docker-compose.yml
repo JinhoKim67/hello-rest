@@ -1,0 +1,59 @@
+services:
+
+  mysql:
+    image: mysql:8.0.44-debian
+
+    container_name: mysql_db
+
+    environment:
+      MYSQL_ROOT_PASSWORD : 1234
+      MYSQL_DATABASE : rest
+
+    ports:
+      - "3306:3306"
+
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - app-network
+
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  spring-app:
+    image: eclipse-temurin:21-jdk-alpine
+
+    container_name: spring-boot-app
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+       - "8080:8080"
+      
+    volumes:
+      - ./target/demo-0.0.1-SNAPSHOT.jar:/app/app.jar
+
+    working_dir: /app
+    command : ["java", "-jar", "app.jar"]
+
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/rest
+      SPRING_DATASOURCE_USERNAME : root
+      SPRING_DATASOURCE_PASSWORD : 1234
+
+    networks:
+      - app-network
+
+volumes:
+  mysql-data:
+
+networks:
+  app-network:
+    driver: bridge
+
+
