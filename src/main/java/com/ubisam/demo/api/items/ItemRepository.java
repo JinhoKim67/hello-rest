@@ -1,8 +1,10 @@
 package com.ubisam.demo.api.items;
 
+import com.ubisam.demo.domain.Item;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.ubisam.demo.domain.Item;
-public interface ItemRepository extends JpaRepository<Item, Long> {
+import java.util.List;
 
+public interface ItemRepository extends JpaRepository<Item, Long> {
+    List<Item> findByNameContainingIgnoreCase(String q);
 }

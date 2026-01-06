@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Docker MySQL CRUD UI</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 20px; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+    select, input, button { padding: 8px 10px; }
+    button { cursor: pointer; }
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: middle; }
+    th { background: #f5f5f5; }
+    .muted { color: #666; font-size: 14px; }
+    .danger { border: 1px solid #c33; }
+    .ok { color: #0a7; }
+    .err { color: #c33; }
+    .cell-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .name-input { width: 260px; max-width: 60vw; }
+    code { background:#f2f2f2; padding:2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h2>Docker(MySQL) 테이블 CRUD</h2>
+
+  <div class="row">
+    <label>테이블</label>
+    <select id="table">
+      <option value="computers">Computer</option>
+      <option value="items">Item</option>
+      <option value="users">User</option>
+    </select>
+
+    <label>검색(이름 포함)</label>
+    <input id="q" placeholder="예: mac, key, ali" />
+
+    <button id="btnSearch">조회</button>
+    <button id="btnReset">검색 초기화</button>
+  </div>
+
+  <div class="row">
+    <label>새 데이터 추가</label>
+    <input id="newName" class="name-input" placeholder="name 입력" />
+    <button id="btnCreate">추가</button>
+  </div>
+
+  <p class="muted">
+    API:
+    <code>GET /api/{table}?q=</code>,
+    <code>POST /api/{table}</code>,
+    <code>PUT /api/{table}/{id}</code>,
+    <code>DELETE /api/{table}/{id}</code>
+  </p>
+
+  <div id="msg"></div>
+  <div id="result"></div>
+
+  <script>
+    const tableSel = document.getElementById('table');
+    const qInput = document.getElementById('q');
+    const btnSearch = document.getElementById('btnSearch');
+    const btnReset = document.getElementById('btnReset');
+    const newName = document.getElementById('newName');
+    const btnCreate = document.getElementById('btnCreate');
+    const msg = document.getElementById('msg');
+    const result = document.getElementById('result');
+
+    function escapeHtml(s) {
+      return String(s)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function setMsg(text, type) {
+      if (!text) { msg.innerHTML = ""; return; }
+      const cls = type === "ok" ? "ok" : type === "err" ? "err" : "muted";
+      msg.innerHTML = `<p class="${cls}">${escapeHtml(text)}</p>`;
+    }
+
+    function apiBase() {
+      return `/api/${tableSel.value}`;
+    }
+
+    async function apiFetch(url, options) {
+      const res = await fetch(url, options);
+      if (res.status === 204) return null; // NO CONTENT
+      const ct = res.headers.get('content-type') || '';
+      const body = ct.includes('application/json') ? await res.json() : await res.text();
+      if (!res.ok) {
+        const detail = typeof body === 'string' ? body : JSON.stringify(body);
+        throw new Error(`${res.status} ${detail}`);
+      }
+      return body;
+    }
+
+    async function loadList() {
+      const q = qInput.value.trim();
+      const url = q ? `${apiBase()}?q=${encodeURIComponent(q)}` : apiBase();
+      setMsg(`조회 중... (${url})`, "muted");
+
+      const rows = await apiFetch(url);
+      renderTable(rows || []);
+      setMsg("완료", "ok");
+    }
+
+    function renderTable(rows) {
+      if (!Array.isArray(rows) || rows.length === 0) {
+        result.innerHTML = "<p>결과가 없습니다.</p>";
+        return;
+      }
+
+      const thead = `
+        <tr>
+          <th style="width:90px;">id</th>
+          <th>name</th>
+          <th style="width:220px;">actions</th>
+        </tr>
+      `;
+
+      const tbody = rows.map(r => {
+        const id = r.id;
+        const name = r.name ?? "";
+        return `
+          <tr data-id="${escapeHtml(id)}">
+            <td>${escapeHtml(id)}</td>
+            <td>
+              <input class="name-input" value="${escapeHtml(name)}" />
+            </td>
+            <td>
+              <div class="cell-actions">
+                <button class="btnUpdate">수정</button>
+                <button class="btnDelete danger">삭제</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      result.innerHTML = `
+        <table>
+          <thead>${thead}</thead>
+          <tbody>${tbody}</tbody>
+        </table>
+      `;
+
+      // 이벤트 바인딩
+      result.querySelectorAll(".btnUpdate").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          const tr = e.target.closest("tr");
+          const id = tr.getAttribute("data-id");
+          const nameVal = tr.querySelector("input").value.trim();
+          if (!nameVal) { setMsg("name은 비어 있을 수 없습니다.", "err"); return; }
+
+          try {
+            setMsg(`수정 중... (id=${id})`, "muted");
+            await apiFetch(`${apiBase()}/${encodeURIComponent(id)}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: nameVal })
+            });
+            setMsg("수정 완료", "ok");
+            await loadList();
+          } catch (err) {
+            setMsg(`수정 실패: ${err.message}`, "err");
+          }
+        });
+      });
+
+      result.querySelectorAll(".btnDelete").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          const tr = e.target.closest("tr");
+          const id = tr.getAttribute("data-id");
+          if (!confirm(`정말 삭제하시겠습니까? (id=${id})`)) return;
+
+          try {
+            setMsg(`삭제 중... (id=${id})`, "muted");
+            await apiFetch(`${apiBase()}/${encodeURIComponent(id)}`, { method: "DELETE" });
+            setMsg("삭제 완료", "ok");
+            await loadList();
+          } catch (err) {
+            setMsg(`삭제 실패: ${err.message}`, "err");
+          }
+        });
+      });
+    }
+
+    btnSearch.addEventListener("click", async () => {
+      try { await loadList(); } catch (err) { setMsg(`조회 실패: ${err.message}`, "err"); }
+    });
+
+    btnReset.addEventListener("click", async () => {
+      qInput.value = "";
+      try { await loadList(); } catch (err) { setMsg(`조회 실패: ${err.message}`, "err"); }
+    });
+
+    btnCreate.addEventListener("click", async () => {
+      const nameVal = newName.value.trim();
+      if (!nameVal) { setMsg("추가할 name을 입력하세요.", "err"); return; }
+
+      try {
+        setMsg("추가 중...", "muted");
+        await apiFetch(apiBase(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: nameVal })
+        });
+        newName.value = "";
+        setMsg("추가 완료", "ok");
+        await loadList();
+      } catch (err) {
+        setMsg(`추가 실패: ${err.message}`, "err");
+      }
+    });
+
+    tableSel.addEventListener("change", async () => {
+      newName.value = "";
+      try { await loadList(); } catch (err) { setMsg(`조회 실패: ${err.message}`, "err"); }
+    });
+
+    // 첫 로드
+    window.addEventListener("load", async () => {
+      try { await loadList(); } catch (err) { setMsg(`조회 실패: ${err.message}`, "err"); }
+    });
+  </script>
+</body>
+</html>

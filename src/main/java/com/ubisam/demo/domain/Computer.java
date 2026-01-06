@@ -1,14 +1,16 @@
 package com.ubisam.demo.domain;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
+@Table(name = "Computer")
 @Data
 public class Computer {
-    
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String name;    
+
+    @Column(length = 100, nullable = false)
+    private String name;
 }

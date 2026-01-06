@@ -1,21 +1,16 @@
 package com.ubisam.demo.domain;
 
-import java.util.UUID;
-
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
+@Table(name = "`User`") // 테이블명이 User면 백틱 처리 권장
 @Data
 public class User {
-    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String name;
- 
-}
 
+    @Column(length = 100, nullable = false)
+    private String name;
+}

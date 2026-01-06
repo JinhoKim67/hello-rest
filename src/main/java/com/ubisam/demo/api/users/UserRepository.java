@@ -1,9 +1,10 @@
 package com.ubisam.demo.api.users;
-import java.util.UUID;
 
-import org.springframework.data.jpa.repository.JpaRepository;
 import com.ubisam.demo.domain.User;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface UserRepository extends JpaRepository<User, UUID> {
-    
+import java.util.List;
+
+public interface UserRepository extends JpaRepository<User, Long> {
+    List<User> findByNameContainingIgnoreCase(String q);
 }
