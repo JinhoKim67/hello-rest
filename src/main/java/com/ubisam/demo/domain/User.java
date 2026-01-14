@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
-@Table(name = "`User`") // 테이블명이 User면 백틱 처리 권장
+@Table(name = "`User`")
 @Data
 public class User {
     @Id
