@@ -3,15 +3,19 @@ package com.ubisam.demo.api.users;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.web.servlet.MockMvc;
 
 import com.ubisam.demo.domain.User;
 
 @SpringBootTest
+@AutoconfigureMockMvc
 public class UserRepositoryTest {
 
     @Autowired
     private UserRepository userRepository; 
 
+    @Autowired
+    private MockMvc mockMvc;
     @Test
 	void contextLoads() {
 
@@ -42,5 +46,13 @@ public class UserRepositoryTest {
         Object finalResult = userRepository.findAll();
         System.out.println("Final Result: " + finalResult);
 	}
+
+    @Test
+    void contextLoads2() throws Exception {
+
+        // perform mock MVC operations
+        mockMvc.perform(null)
+               .andExpect(null);
+    }
 
 }
