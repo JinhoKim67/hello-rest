@@ -13,4 +13,6 @@ public class User {
 
     @Column(length = 100, nullable = false)
     private String name;
+    private String email;
+    private String phone;
 }
