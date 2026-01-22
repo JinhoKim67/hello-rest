@@ -13,4 +13,7 @@ public class Computer {
 
     @Column(length = 100, nullable = false)
     private String name;
+    private String model;
+    private String spec;
+
 }
